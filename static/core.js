@@ -2,14 +2,16 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // 1. INITIALIZE STATE
-let player = { x: 250, y: 250, width: 25, height: 25, speed: 25, dir_x: 0, dir_y: 0 }; // snake head(basically snake[0])
-let keys = {};
-msg = "";
-snake = [[250, 250]];
-state = "START";
-// fruit_carrot = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
-// fruit_pumkin = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
-// fruit_apple = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
+initialState();
+function initialState() {
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	msg = "";
+	state = "START";
+	player = { x: 250, y: 250, width: 25, height: 25, speed: 25, dir_x: 0, dir_y: 0 };
+	keys = {};
+	snake = [[250, 250]];
+	spawnFruit();
+}
 
 const headImg = new Image();
 headImg.src = "hq720.jpg"
@@ -45,12 +47,35 @@ function gameLoop() {
 		player = { x: 250, y: 250, width: 25, height: 25, speed: 25, dir_x: 0, dir_y: 0 };
 		keys = {};
 		snake = [[250, 250]];
+		spawnFruit();
 	}
 }
 
 // This forces the loop to run exactly every 'frameDelay' milliseconds
 setInterval(gameLoop, frameDelay);
 
+
+function spawnFruit() {
+	do {
+		onBody = false;
+		fruit = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25, 'null'];
+		for(let i = 0; i < snake.length; i++){
+			if(snake[i][0] == fruit[0] && snake[i][1] == fruit[1]){
+				onBody = true;
+				break;
+			}
+		}
+	}while(onBody);
+
+	let probablity = Math.random();
+	if(probablity > 0.9) fruit[2] = 'high';
+	else if (probablity > 0.6) fruit[2] = 'medium';
+	else fruit[2] = 'low';
+}
+
+
+lapse = 0;
+immune = 0;
 function update() {
 	if ((keys['KeyW'] || keys['ArrowUp']) && player.dir_y == 0) {
 		player.dir_x = 0;
@@ -68,13 +93,49 @@ function update() {
 		player.dir_x = 1;
 		player.dir_y = 0;
 	}
-
-	player.x += player.dir_x * player.speed
-	player.y += player.dir_y * player.speed
+	if(immune > 0) immune--;
+	if(immune > 0) {
+		player.x += player.dir_x * player.speed;
+		if(player.x < 0) {
+			player.x += canvas.width;
+		}
+		else {
+			player.x = player.x % canvas.width;
+		}
+		player.y += player.dir_y * player.speed;
+		if(player.y < 0) {
+			player.y += canvas.height;
+		}
+		else {
+			player.y = player.y % canvas.height;
+		}
+	}
+	else {
+		player.x += player.dir_x * player.speed;
+		player.y += player.dir_y * player.speed;
+	}
 
 	snake.unshift([player.x, player.y]);
-	snake.pop();
-	
+
+	if(snake[0][0] == fruit[0] && snake[0][1] == fruit[1]) {
+		if(fruit[2] == 'low') lapse += 1;
+		else if(fruit[2] == 'medium') lapse += 3;
+		else if(fruit[2] == 'high') {
+			lapse += 1;
+			immune = FPS * 10;
+		}
+		lapse--;
+		spawnFruit();
+	}
+	else{
+		if(lapse > 0) {
+			lapse--;
+		}
+		else {
+			snake.pop();
+		}
+	}
+
 }
 
 function draw() {
@@ -89,6 +150,12 @@ function draw() {
 		ctx.drawImage(bodyImg, snake[i][0], snake[i][1], player.width, player.height);
 	}
 	ctx.drawImage(headImg, snake[0][0], snake[0][1], player.width, player.height);
+
+	// Draw fruit
+	if(fruit[2] == 'high') ctx.fillStyle = 'yellow';
+	else if (fruit[2] == 'medium') ctx.fillStyle = 'blue';
+	else if (fruit[2] == 'low') ctx.fillStyle = 'red';
+	ctx.fillRect(fruit[0], fruit[1], player.width, player.height);
 }
 
 function gameOver() {
@@ -109,11 +176,13 @@ function gameOver() {
 		state = "OVER";
 	}
 
-	for (let i = 1; i < snake.length; i++) {
-		if (snake[0][0] == snake[i][0] && snake[0][1] == snake[i][1]) {
-			msg = "Self Collision";
-			state = "OVER";
-			break;
+	if(immune == 0) {
+		for (let i = 1; i < snake.length; i++) {
+			if (snake[0][0] == snake[i][0] && snake[0][1] == snake[i][1]) {
+				msg = "Self Collision";
+				state = "OVER";
+				break;
+			}
 		}
 	}
 }
@@ -136,6 +205,8 @@ function drawGrid() {
 
 	ctx.stroke();
 }
+
+spawnFruit();
 
 // Start the loop
 gameLoop();
