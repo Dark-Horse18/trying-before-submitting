@@ -7,9 +7,7 @@ let keys = {};
 msg = "";
 snake = [[250, 250]];
 state = "START";
-// fruit_carrot = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
-// fruit_pumkin = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
-// fruit_apple = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25]
+fruit = [0,0,'null'];
 
 const headImg = new Image();
 headImg.src = "hq720.jpg"
@@ -51,6 +49,27 @@ function gameLoop() {
 // This forces the loop to run exactly every 'frameDelay' milliseconds
 setInterval(gameLoop, frameDelay);
 
+
+function spawnFruit() {
+	do {
+		onBody = false;
+		fruit = [Math.floor(Math.random() * 20) * 25, Math.floor(Math.random() * 20) * 25, 'null'];
+		for(let i = 0; i < snake.length; i++){
+			if(snake[i][0] == fruit[0] && snake[i][1] == fruit[1]){
+				onBody = true;
+				break;
+			}
+		}
+	}while(onBody);
+
+	let probablity = Math.random();
+	if(probablity > 0.9) fruit[2] = 'high';
+	else if (probablity > 0.6) fruit[2] = 'medium';
+	else fruit[2] = 'low';
+}
+
+
+lapse = 0;
 function update() {
 	if ((keys['KeyW'] || keys['ArrowUp']) && player.dir_y == 0) {
 		player.dir_x = 0;
@@ -73,8 +92,22 @@ function update() {
 	player.y += player.dir_y * player.speed
 
 	snake.unshift([player.x, player.y]);
-	snake.pop();
-	
+
+	if(snake[0][0] == fruit[0] && snake[0][1] == fruit[1]) {
+		if(fruit[2] == 'low') lapse += 1;
+		else if(fruit[2] == 'medium') lapse += 3;
+		else if(fruit[2] == 'high') lapse += 1;
+		lapse--;
+		spawnFruit();
+	}
+	else{
+		if(lapse > 0) {
+			lapse--;
+		}
+		else {
+			snake.pop();
+		}
+	}	
 }
 
 function draw() {
@@ -89,6 +122,12 @@ function draw() {
 		ctx.drawImage(bodyImg, snake[i][0], snake[i][1], player.width, player.height);
 	}
 	ctx.drawImage(headImg, snake[0][0], snake[0][1], player.width, player.height);
+
+	// Draw fruit
+	if(fruit[2] == 'high') ctx.fillStyle = 'yellow';
+	else if (fruit[2] == 'medium') ctx.fillStyle = 'blue';
+	else if (fruit[2] == 'low') ctx.fillStyle = 'red';
+	ctx.fillRect(fruit[0], fruit[1], player.width, player.height);
 }
 
 function gameOver() {
@@ -136,6 +175,8 @@ function drawGrid() {
 
 	ctx.stroke();
 }
+
+spawnFruit();
 
 // Start the loop
 gameLoop();
